@@ -1,0 +1,101 @@
+#%%
+
+# Part I: Webscraping Process
+# importing necessary libraries for web scraping
+
+from urllib.request import urlopen as uReq
+from bs4 import BeautifulSoup as soup
+
+
+# creating the file
+filename="comparis_realestate_data_zürich_only.csv"
+f = open(filename, "w", newline='\n')
+
+# writing headers
+headers ="title,property_type,living_space,floor,#_of_rooms,street,post_code,city,price\n"
+f.write(headers)
+
+
+# iterating over 100 pages to obtain data from each rental post in website
+
+for i in range(1, 100):
+    
+    # connecting to website
+    url = 'https://en.comparis.ch/immobilien/marktplatz/zuerich/mieten?'
+    
+    # url updater
+    url = str(url) + "page=" + str(i)    
+    
+    # reading html
+    uClient = uReq(url)
+    page_html=uClient.read()
+    uClient.close()
+    
+    #html parsing
+    page_soup = soup(page_html, "html.parser")
+    
+    # obtain each post
+    containers = page_soup.findAll("div", {"class":"content-column columns"})
+    
+    # iterating over each container within each page
+    for container in containers:
+        
+        # trying to obtain relevant data if not assigning not-existing
+        try:
+            title = container.div.a.text
+        except AttributeError:
+            title="not-existing"
+                 
+        try:
+            property_type= container.ul.li.text
+        except AttributeError:
+            property_type="not-existing"
+            
+        try: 
+            living_space_m2=container.ul.li.next_sibling.next_sibling.text
+        except AttributeError:
+            living_space_m2="not-existing"
+            
+        
+        try:   
+            floor=container.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.text
+        except AttributeError:
+            floor="not-existing"
+        
+        try:
+            number_of_rooms=container.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.text
+        except AttributeError:
+            number_of_rooms="not-existing"
+                  
+            
+        try:
+            post_code=container.find("span", {"class":"street"}).next_sibling.strip()[0:4]
+        except AttributeError:
+            post_code ="not-existing"
+                    
+        try:
+            city = container.find("span", {"class":"street"}).next_sibling.strip()[5:]
+        except AttributeError:
+            city="not-existing"
+                    
+        try:
+            street = container.find("span", {"class":"street"}).text
+        except AttributeError:
+            street="not-existing"
+                    
+        try:
+            price = container.find("div", {"class":"item-price"}).strong.text
+        except AttributeError:
+            price ="not-existing"
+    
+        # writing data to csv file
+        f.write(title.replace(",", " ") + "," + property_type.replace(",", " ") + "," + 
+                    living_space_m2 + "," + 
+                    floor + "," + 
+                    number_of_rooms + "," + 
+                    street.replace(",", " ") + "," + 
+                    post_code + "," + 
+                    city + "," + price.replace(",", ".") + "\n")
+    
+# closing the file
+f.close()
